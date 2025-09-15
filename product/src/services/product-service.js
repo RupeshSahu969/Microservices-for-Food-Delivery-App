@@ -75,6 +75,30 @@ class ProductService {
         }
     }
      
+
+    async GetProductPayload(userId, { productId, qty }, event) {
+        try {
+            const product = await this.repository.FindById(productId);
+
+            if (product) {
+                const payload = {
+                    event,
+                    data: {
+                        userId,
+                        product,
+                        qty,
+                    },
+                };
+
+                return FormateData(payload);
+            } else {
+                return FormateData({ error: 'No Product Available' });
+            }
+        } catch (err) {
+            throw new APIError('Unable to Build Payload', err);
+        }
+    }
+
 }
 
 module.exports = ProductService;
