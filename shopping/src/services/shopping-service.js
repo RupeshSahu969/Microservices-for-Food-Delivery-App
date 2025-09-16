@@ -7,6 +7,18 @@ class ShoppingService {
     this.repository = new ShoppingRepository();
   }
 
+  async getcart({_id}){
+    try{
+      const cartItem=await this.repository.Cart(_id);
+      return FormateData(cartItems)
+    }
+    catch(err){
+      throw err
+    }
+  }
+
+
+
   async PlaceOrder(userInput) {
     const { _id, txnNumber } = userInput;
 
@@ -28,6 +40,60 @@ class ShoppingService {
       throw new APIError("Data Not found", err);
     }
   }
+
+  async ManageCart(customerId,item,qty,isRemove){
+
+  try {
+    const cartResult= await this.repository.AddCartItem(customerId,item,qty,isRemove);
+    return FormateData(cartResult);
+
+  } catch (error) {
+    throw error
+  }
 }
+
+async SubscribeEvents(payload){
+ 
+        const { event, data } =  payload;
+
+        const { userId, product,  qty } = data;
+
+        switch(event){
+           
+            case 'ADD_TO_CART':
+                this.ManageCart(userId,product, qty, false);
+                break;
+            case 'REMOVE_FROM_CART':
+                this.ManageCart(userId,product,qty, true);
+                break;
+            default:
+                break;
+        }
+ 
+    }
+
+     async GetOrderPayload(userId, order, event) {
+            
+                
+                if (order) {
+                    const payload = {
+                        event,
+                        data: {
+                            userId,
+                            order
+                        },
+                    };
+    
+                    return FormateData(payload);
+                } else {
+                    return FormateData({ error: 'No Product Available' });
+                }
+            
+        }
+
+
+}
+
+
 
 module.exports = ShoppingService;

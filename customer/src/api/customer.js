@@ -1,202 +1,93 @@
-const CustomerService = require("../services/customer-service");
-const UserAuth = require("./middlewares/auth");
+const CustomerService = require('../services/customer-service');
+const UserAuth = require('./middlewares/auth');
 
-module.exports = (app) => {
-  const service = new CustomerService();
+module.exports = (app, channel) => {
+    const service = new CustomerService();
 
-  /**
-   * @swagger
-   * tags:
-   *   name: Customers
-   *   description: Customer management APIs
-   */
+    // Utility function for handling errors and responses
+    const handleResponse = (res, data, message = "Success") => {
+        return res.json({
+            success: true,
+            message,
+            data
+        });
+    };
 
-  /**
-   * @swagger
-   * /signup:
-   *   post:
-   *     summary: Register a new user
-   *     tags: [Customers]
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - email
-   *               - password
-   *               - phone
-   *             properties:
-   *               email:
-   *                 type: string
-   *                 example: user@example.com
-   *               password:
-   *                 type: string
-   *                 example: strongpassword123
-   *               phone:
-   *                 type: string
-   *                 example: "+1234567890"
-   *     responses:
-   *       200:
-   *         description: User registered successfully
-   */
-  app.post("/signup", async (req, res, next) => {
-    try {
-      const { email, password, phone } = req.body;
-      const { data } = await service.SignUp({ email, password, phone });
-      return res.json(data);
-    } catch (err) {
-      next(err);
-    }
-  });
+    const handleError = (res, error) => {
+        // Log error to a logging system (e.g., winston)
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "An unexpected error occurred"
+        });
+    };
 
-  /**
-   * @swagger
-   * /login:
-   *   post:
-   *     summary: Login a user
-   *     tags: [Customers]
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - email
-   *               - password
-   *             properties:
-   *               email:
-   *                 type: string
-   *                 example: user@example.com
-   *               password:
-   *                 type: string
-   *                 example: strongpassword123
-   *     responses:
-   *       200:
-   *         description: User logged in successfully, returns auth data
-   */
-  app.post("/login", async (req, res, next) => {
-    try {
-      const { email, password } = req.body;
-      const { data } = await service.SignIn({ email, password });
-      return res.json(data);
-    } catch (err) {
-      next(err);
-    }
-  });
+    // Sign up route
+    app.post('/signup', async (req, res) => {
+        try {
+            const { email, password, phone } = req.body;
+            const { data } = await service.SignUp({ email, password, phone });
+            handleResponse(res, data, "Sign-up successful");
+        } catch (error) {
+            handleError(res, error);
+        }
+    });
 
-  /**
-   * @swagger
-   * /address:
-   *   post:
-   *     summary: Add new address for logged-in user
-   *     tags: [Customers]
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               street:
-   *                 type: string
-   *                 example: "123 Main St"
-   *               postalCode:
-   *                 type: string
-   *                 example: "12345"
-   *               city:
-   *                 type: string
-   *                 example: "New York"
-   *               country:
-   *                 type: string
-   *                 example: "USA"
-   *     responses:
-   *       200:
-   *         description: Address added successfully
-   */
-  app.post("/address", UserAuth, async (req, res, next) => {
-    try {
-      const { _id } = req.user;
-      const { street, postalCode, city, country } = req.body;
-      const { data } = await service.AddNewAddress(_id, {
-        street,
-        postalCode,
-        city,
-        country,
-      });
-      return res.json(data);
-    } catch (err) {
-      next(err);
-    }
-  });
+    // Login route
+    app.post('/login', async (req, res) => {
+        try {
+            const { email, password } = req.body;
+            const { data } = await service.SignIn({ email, password });
+            handleResponse(res, data, "Login successful");
+        } catch (error) {
+            handleError(res, error);
+        }
+    });
 
-  /**
-   * @swagger
-   * /profile:
-   *   get:
-   *     summary: Get logged-in user profile
-   *     tags: [Customers]
-   *     security:
-   *       - bearerAuth: []
-   *     responses:
-   *       200:
-   *         description: Returns user profile data
-   */
-  app.get("/profile", UserAuth, async (req, res, next) => {
-    try {
-      const { _id } = req.user;
-      const { data } = await service.GetProfile({ _id });
-      return res.json(data);
-    } catch (err) {
-      next(err);
-    }
-  });
+    // Add Address route
+    app.post('/address', UserAuth, async (req, res) => {
+        try {
+            const { _id } = req.user;
+            const { street, postalCode, city, country } = req.body;
+            const { data } = await service.AddNewAddress(_id, { street, postalCode, city, country });
+            handleResponse(res, data, "Address added successfully");
+        } catch (error) {
+            handleError(res, error);
+        }
+    });
 
-  /**
-   * @swagger
-   * /shoping-details:
-   *   get:
-   *     summary: Get shopping details for logged-in user
-   *     tags: [Customers]
-   *     security:
-   *       - bearerAuth: []
-   *     responses:
-   *       200:
-   *         description: Returns shopping details
-   */
-  app.get("/shoping-details", UserAuth, async (req, res, next) => {
-    try {
-      const { _id } = req.user;
-      const { data } = await service.GetShopingDetails(_id);
-      return res.json(data);
-    } catch (err) {
-      next(err);
-    }
-  });
+    // Get Profile route
+    app.get('/profile', UserAuth, async (req, res) => {
+        try {
+            const { _id } = req.user;
+            const { data } = await service.GetProfile({ _id });
+            handleResponse(res, data, "Profile fetched successfully");
+        } catch (error) {
+            handleError(res, error);
+        }
+    });
 
-  /**
-   * @swagger
-   * /wishlist:
-   *   get:
-   *     summary: Get wishlist for logged-in user
-   *     tags: [Customers]
-   *     security:
-   *       - bearerAuth: []
-   *     responses:
-   *       200:
-   *         description: Returns wishlist items
-   */
-  app.get("/wishlist", UserAuth, async (req, res, next) => {
-    try {
-      const { _id } = req.user;
-      const { data } = await service.GetWishList(_id);
-      return res.status(200).json(data);
-    } catch (err) {
-      next(err);
-    }
-  });
+    // Get Shopping Details route
+    app.get('/shoping-details', UserAuth, async (req, res) => {
+        try {
+            const { _id } = req.user;
+            const { data } = await service.GetShopingDetails(_id);
+            handleResponse(res, data, "Shopping details fetched successfully");
+        } catch (error) {
+            handleError(res, error);
+        }
+    });
+
+    // Get Wishlist route
+    app.get('/wishlist', UserAuth, async (req, res) => {
+        try {
+            const { _id } = req.user;
+            const { data } = await service.GetWishList(_id);
+            handleResponse(res, data, "Wishlist fetched successfully");
+        } catch (error) {
+            handleError(res, error);
+        }
+    });
+
+    
 };
